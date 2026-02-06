@@ -213,17 +213,24 @@ witness-protocol/
 
 ## Build Roadmap (6 Weeks)
 
-### Week 1: The Intercept
+### Week 1: The Intercept ✅ COMPLETE
 **Goal**: MCP proxy that logs every tool call
 
-- [ ] Initialize TypeScript project with Bun
-- [ ] Implement MCP server (stdio transport)
-- [ ] Implement MCP client (upstream connection)
-- [ ] Create tool call router
-- [ ] SQLite schema for event log
-- [ ] Basic CLI: `witness run -- <command>`
+- [x] Initialize TypeScript project (Node.js + tsx, adapted from Bun due to Windows)
+- [x] Implement MCP server (stdio transport) — `src/proxy/server.ts`
+- [x] Implement MCP client (upstream connection) — `src/proxy/client.ts`
+- [x] Create tool call router — `src/proxy/router.ts`
+- [x] SQLite schema for event log — `src/receipts/store.ts` (uses `node:sqlite` built-in)
+- [x] Basic CLI: `witness run --server <command>` — `src/index.ts`
+- [x] Policy engine (pulled forward from Week 3) — `src/policy/engine.ts` + `parser.ts`
 
-**Victory Condition**: `witness run -- npm install` logs all tool calls to SQLite
+**Victory Condition**: ✅ `witness run --server <command>` proxies MCP tool calls, evaluates policy, and logs all events to SQLite
+
+**Implementation Notes**:
+- Used `node:sqlite` (Node.js 22+ built-in) instead of `better-sqlite3` to avoid native compilation on Windows
+- Used low-level `Server` class instead of `McpServer` for full request handler control
+- Policy engine supports regex matching for terminal commands and glob matching for filesystem paths
+- CLI supports `witness init`, `witness run`, and `witness receipts` commands
 
 ---
 
@@ -240,16 +247,16 @@ witness-protocol/
 
 ---
 
-### Week 3: The Gate
+### Week 3: The Gate (partially complete — core pulled into Week 1)
 **Goal**: Policy engine with risk scoring
 
-- [ ] YAML policy parser
-- [ ] Rule matching engine (glob + regex)
-- [ ] Risk scoring algorithm
-- [ ] Decision engine (allow/deny/approve)
-- [ ] Approval prompt system
+- [x] YAML policy parser — completed in Week 1
+- [x] Rule matching engine (glob + regex) — completed in Week 1
+- [x] Risk scoring algorithm — completed in Week 1
+- [x] Decision engine (allow/deny/approve) — completed in Week 1
+- [ ] Approval prompt system (interactive terminal prompts for `require_approval` decisions)
 
-**Victory Condition**: Dangerous command blocked, safe command auto-approved
+**Victory Condition**: Dangerous command blocked, safe command auto-approved ✅ (core logic done, interactive approval pending)
 
 ---
 
@@ -298,10 +305,10 @@ witness-protocol/
 
 | Component | Technology |
 |-----------|------------|
-| Runtime | Bun (fast, single binary potential) |
+| Runtime | Node.js 22+ with tsx (Bun planned for single-binary release) |
 | Language | TypeScript |
-| MCP | @anthropic/mcp-sdk |
-| Database | SQLite (better-sqlite3) |
+| MCP | @modelcontextprotocol/sdk ^1.12.1 |
+| Database | node:sqlite (built-in, zero native deps) |
 | Crypto | @noble/ed25519 |
 | CLI | Commander.js |
 | UI | Vanilla HTML + minimal CSS (no framework) |
@@ -383,6 +390,11 @@ This plan synthesizes insights from:
 
 ## Next Session
 
-Start fresh with: "Build Witness Week 1 - The Intercept"
+Start with: **"Build Witness Week 2 - The Shadow Timeline"**
 
-Reference this file: `C:\Users\Alee\witness-protocol\ROADMAP.md`
+Focus areas:
+1. Shadow workspace manager — clone working directory to temp, execute there
+2. Copy-on-write filesystem overlay — track which files changed
+3. Diff engine — generate before/after comparisons
+4. Wire shadow execution into the existing router pipeline
+5. Show diff to user before committing changes to real filesystem
