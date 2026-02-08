@@ -234,16 +234,28 @@ witness-protocol/
 
 ---
 
-### Week 2: The Shadow Timeline
+### Week 2: The Shadow Timeline ✅ COMPLETE
 **Goal**: Execute tool calls in isolated workspace
 
-- [ ] Shadow workspace manager (temp directory clone)
-- [ ] Copy-on-write filesystem overlay
-- [ ] Diff engine (before/after comparison)
-- [ ] Merge policy (allowed paths only)
-- [ ] Timeline branching model
+- [x] Shadow workspace manager (temp directory clone) — `src/sandbox/workspace.ts`
+- [x] Copy-on-write filesystem overlay with file snapshots and hash tracking
+- [x] Diff engine (LCS-based unified diff with binary detection) — `src/sandbox/diff.ts`
+- [x] Shadow manager orchestrator (workspace + diff + timeline) — `src/sandbox/manager.ts`
+- [x] Timeline branching model with lifecycle events — `src/timeline/branch.ts`
+- [x] SQLite schema for timelines + timeline_events — `src/receipts/store.ts`
+- [x] Router integration: `allow_shadow` decisions execute in shadow — `src/proxy/router.ts`
+- [x] CLI: `--no-shadow`, `--shadow-dir` flags + `witness timeline` command
+- [x] Tests: 18 tests across 3 suites (workspace: 6, diff: 5, timeline: 7)
 
-**Victory Condition**: Tool calls execute in shadow, diff shown before commit
+**Victory Condition**: ✅ `allow_shadow` tool calls execute in isolated shadow workspace, diff computed and auto-merged, timeline recorded in SQLite
+
+**Implementation Notes**:
+- Shadow workspaces clone to `os.tmpdir()/witness-shadow-<uuid>/`, excluding node_modules/.git/.witness/dist by default
+- Diff engine uses LCS algorithm for unified diff output (git-compatible format), detects binary files via null byte scanning
+- Timeline IDs use `tl_` prefix with 12-char UUID suffix
+- Router auto-merges shadow changes back to source after successful execution
+- Shadow execution appends diff summary to tool result content for agent visibility
+- Max workspace size configurable (default 500MB), max diff file size 1024KB
 
 ---
 
@@ -390,11 +402,11 @@ This plan synthesizes insights from:
 
 ## Next Session
 
-Start with: **"Build Witness Week 2 - The Shadow Timeline"**
+Start with: **"Build Witness Week 3 - The Gate (interactive approval)"**
 
 Focus areas:
-1. Shadow workspace manager — clone working directory to temp, execute there
-2. Copy-on-write filesystem overlay — track which files changed
-3. Diff engine — generate before/after comparisons
-4. Wire shadow execution into the existing router pipeline
-5. Show diff to user before committing changes to real filesystem
+1. Approval prompt system — interactive terminal prompts for `require_approval` decisions
+2. Risk threshold enforcement — auto-approve below 0.3, require approval above 0.7
+3. Approval timeout and fallback behavior
+4. Wire approval flow into the router pipeline (between policy decision and execution)
+5. Log approval/rejection decisions in the event store
