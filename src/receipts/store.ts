@@ -39,6 +39,25 @@ const SCHEMA = `
     duration_ms INTEGER,
     status TEXT NOT NULL DEFAULT 'pending'
   );
+
+  CREATE TABLE IF NOT EXISTS timelines (
+    id TEXT PRIMARY KEY,
+    parent_id TEXT NOT NULL DEFAULT 'tl_main',
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    status TEXT NOT NULL DEFAULT 'active',
+    branch_point TEXT NOT NULL,
+    tool_name TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS timeline_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timeline_id TEXT NOT NULL REFERENCES timelines(id),
+    event_type TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    data_json TEXT
+  );
 `;
 
 export class EventStore {
@@ -98,6 +117,81 @@ export class EventStore {
       "SELECT * FROM sessions ORDER BY started_at DESC LIMIT ?"
     );
     return stmt.all(limit) as unknown as SessionRecord[];
+  }
+
+  insertTimeline(timeline: {
+    id: string;
+    parentId: string;
+    sessionId: string;
+    status: string;
+    branchPoint: string;
+    toolName: string;
+    description?: string;
+  }): void {
+    const stmt = this.db.prepare(
+      "INSERT INTO timelines (id, parent_id, session_id, status, branch_point, tool_name, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+    stmt.run(
+      timeline.id,
+      timeline.parentId,
+      timeline.sessionId,
+      timeline.status,
+      timeline.branchPoint,
+      timeline.toolName,
+      timeline.description ?? null,
+      new Date().toISOString()
+    );
+  }
+
+  getTimeline(id: string): Record<string, unknown> | null {
+    const stmt = this.db.prepare("SELECT * FROM timelines WHERE id = ?");
+    const rows = stmt.all(id) as unknown as Record<string, unknown>[];
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  getSessionTimelines(sessionId: string): Record<string, unknown>[] {
+    const stmt = this.db.prepare(
+      "SELECT * FROM timelines WHERE session_id = ? ORDER BY created_at ASC"
+    );
+    return stmt.all(sessionId) as unknown as Record<string, unknown>[];
+  }
+
+  getChildTimelines(parentId: string): Record<string, unknown>[] {
+    const stmt = this.db.prepare(
+      "SELECT * FROM timelines WHERE parent_id = ? ORDER BY created_at ASC"
+    );
+    return stmt.all(parentId) as unknown as Record<string, unknown>[];
+  }
+
+  updateTimelineStatus(id: string, status: string): void {
+    const stmt = this.db.prepare(
+      "UPDATE timelines SET status = ? WHERE id = ?"
+    );
+    stmt.run(status, id);
+  }
+
+  insertTimelineEvent(event: {
+    timelineId: string;
+    eventType: string;
+    timestamp: string;
+    dataJson?: string;
+  }): void {
+    const stmt = this.db.prepare(
+      "INSERT INTO timeline_events (timeline_id, event_type, timestamp, data_json) VALUES (?, ?, ?, ?)"
+    );
+    stmt.run(
+      event.timelineId,
+      event.eventType,
+      event.timestamp,
+      event.dataJson ?? null
+    );
+  }
+
+  getTimelineEvents(timelineId: string): Record<string, unknown>[] {
+    const stmt = this.db.prepare(
+      "SELECT * FROM timeline_events WHERE timeline_id = ? ORDER BY id ASC"
+    );
+    return stmt.all(timelineId) as unknown as Record<string, unknown>[];
   }
 
   close(): void {
